@@ -28,15 +28,35 @@ export default async function TeamsManagementPage() {
 
   const { data: teams, error: teamsError } = await supabase
     .from("teams")
-    .select("*, championships(name), profiles(full_name)")
+    .select("*")
     .order("created_at", { ascending: false })
 
-  console.log("[v0] Teams query result:", { teams, teamsError, count: teams?.length })
+  console.log("[v0] Teams fetched:", { count: teams?.length, error: teamsError, teams })
 
-  // Also try a simple query without joins to see if that's the issue
-  const { data: simpleTeams, error: simpleError } = await supabase.from("teams").select("*")
+  // Se temos equipes, buscar dados relacionados separadamente
+  let teamsWithDetails = teams || []
+  if (teams && teams.length > 0) {
+    // Buscar campeonatos
+    const championshipIds = [...new Set(teams.map((t) => t.championship_id).filter(Boolean))]
+    console.log("[v0] Championship IDs:", championshipIds)
+    const { data: championships } = await supabase.from("championships").select("id, name").in("id", championshipIds)
+    console.log("[v0] Championships fetched:", championships)
 
-  console.log("[v0] Simple teams query:", { simpleTeams, simpleError, count: simpleTeams?.length })
+    // Buscar perfis (técnicos)
+    const coachIds = [...new Set(teams.map((t) => t.coach_id).filter(Boolean))]
+    console.log("[v0] Coach IDs:", coachIds)
+    const { data: coaches } = await supabase.from("profiles").select("id, full_name").in("id", coachIds)
+    console.log("[v0] Coaches fetched:", coaches)
+
+    // Combinar os dados
+    teamsWithDetails = teams.map((team) => ({
+      ...team,
+      championship_name: championships?.find((c) => c.id === team.championship_id)?.name,
+      coach_name: coaches?.find((c) => c.id === team.coach_id)?.full_name,
+    }))
+
+    console.log("[v0] Teams with details:", { count: teamsWithDetails.length, teams: teamsWithDetails })
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -79,18 +99,18 @@ export default async function TeamsManagementPage() {
           )}
         </div>
 
-        {teams && teams.length > 0 ? (
+        {teamsWithDetails && teamsWithDetails.length > 0 ? (
           <div className="grid gap-6">
-            {teams.map((team) => (
+            {teamsWithDetails.map((team) => (
               <Card key={team.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle>{team.name}</CardTitle>
                       <CardDescription className="mt-1">
-                        Campeonato: {team.championships?.name || "N/A"}
+                        Campeonato: {team.championship_name || "N/A"}
                         <br />
-                        Técnico: {team.profiles?.full_name || "Não informado"}
+                        Técnico: {team.coach_name || "Não informado"}
                       </CardDescription>
                     </div>
                     <Badge className={getStatusColor(team.registration_status)}>
@@ -114,10 +134,11 @@ export default async function TeamsManagementPage() {
                 <div className="space-y-2">
                   <h3 className="text-xl font-semibold">Nenhuma equipe encontrada</h3>
                   <p className="text-muted-foreground max-w-md">
-                    Não foram encontradas equipes no banco de dados. Verifique se as equipes foram criadas corretamente.
+                    Não foram encontradas equipes no banco de dados. Isso pode indicar um problema de permissões (RLS)
+                    ou as equipes ainda não foram cadastradas.
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Debug: {simpleTeams?.length || 0} equipes encontradas na query simples
+                  <p className="text-xs text-gray-500 mt-4">
+                    Debug: {teams?.length || 0} equipes na query | Error: {teamsError?.message || "nenhum"}
                   </p>
                 </div>
                 <Button asChild className="mt-2">
