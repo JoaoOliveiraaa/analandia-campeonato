@@ -10,7 +10,7 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Campeonato Municipal de Analândia",
   description: "Sistema Oficial de Gestão Esportiva da Prefeitura Municipal de Analândia - SP",
-  generator: "vexis",
+  generator: "v0.app",
   icons: {
     icon: [
       {

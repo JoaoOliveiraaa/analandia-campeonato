@@ -19,6 +19,13 @@ export default async function ProfilePage() {
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
+  const { data: teams } = await supabase
+    .from("teams")
+    .select("id, name")
+    .eq("registration_status", "approved")
+    .order("name", { ascending: true })
+  // </CHANGE>
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
       <header className="border-b bg-white/80 backdrop-blur-sm">
@@ -38,7 +45,7 @@ export default async function ProfilePage() {
           <p className="text-muted-foreground">Atualize suas informações pessoais</p>
         </div>
 
-        <ProfileForm profile={profile} userEmail={user.email || ""} />
+        <ProfileForm profile={profile} userEmail={user.email || ""} teams={teams || []} />
       </main>
     </div>
   )

@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import AdminHeader from "@/components/admin-header"
 import MatchScoreForm from "@/components/match-score-form"
+import MatchEventForm from "@/components/match-event-form" // Added import
 import { notFound } from "next/navigation"
 import { Calendar, MapPin, User } from "lucide-react"
 
@@ -101,14 +102,14 @@ export default async function MatchDetailPage({ params }: { params: { id: string
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
+    <div className="min-h-screen bg-gray-50">
       <AdminHeader userName={profile.full_name} />
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
+      <main className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Match Header */}
         <div className="mb-8">
           <Badge className={getStatusColor(match.status)}>{getStatusLabel(match.status)}</Badge>
-          <h1 className="text-3xl font-bold mt-2">{match.championships?.name}</h1>
+          <h1 className="text-3xl font-bold text-[#1e3a8a] mt-2">{match.championships?.name}</h1>
           {match.round && <p className="text-muted-foreground">{match.round}</p>}
         </div>
 
@@ -171,6 +172,19 @@ export default async function MatchDetailPage({ params }: { params: { id: string
             </CardHeader>
             <CardContent>
               <MatchScoreForm match={match} />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Event Registration Form */}
+        {match.status !== "completed" && match.status !== "cancelled" && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Registrar Evento</CardTitle>
+              <CardDescription>Adicione gols, cartões, substituições e outros eventos</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MatchEventForm matchId={match.id} homeTeamId={match.home_team_id} awayTeamId={match.away_team_id} />
             </CardContent>
           </Card>
         )}

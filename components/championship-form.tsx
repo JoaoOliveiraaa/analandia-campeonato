@@ -27,6 +27,7 @@ export default function ChampionshipForm({ userId }: ChampionshipFormProps) {
   const [maxTeams, setMaxTeams] = useState("")
   const [format, setFormat] = useState("round_robin")
   const [status, setStatus] = useState("upcoming")
+  const [imageUrl, setImageUrl] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -50,6 +51,7 @@ export default function ChampionshipForm({ userId }: ChampionshipFormProps) {
         format,
         status,
         created_by: userId,
+        image_url: imageUrl || null,
       })
 
       if (error) throw error
@@ -104,6 +106,18 @@ export default function ChampionshipForm({ userId }: ChampionshipFormProps) {
               value={sport}
               onChange={(e) => setSport(e.target.value)}
             />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="imageUrl">URL da Imagem do Campeonato</Label>
+            <Input
+              id="imageUrl"
+              type="url"
+              placeholder="https://exemplo.com/imagem-do-campeonato.jpg"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">Insira a URL de uma imagem para representar o campeonato</p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">

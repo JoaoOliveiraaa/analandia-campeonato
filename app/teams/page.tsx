@@ -1,9 +1,11 @@
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import PublicHeader from "@/components/public-header"
 import { Users } from "lucide-react"
 import Image from "next/image"
+import Link from "next/link"
 
 export default async function TeamsPage() {
   const supabase = await createClient()
@@ -37,10 +39,16 @@ export default async function TeamsPage() {
             height={60}
             className="drop-shadow-lg hidden sm:block"
           />
-          <div>
+          <div className="flex-1">
             <h1 className="text-4xl font-bold mb-2 text-[#1e3a8a]">Equipes</h1>
             <p className="text-slate-600">Todas as equipes aprovadas nos campeonatos de Analândia</p>
           </div>
+          <Button asChild className="bg-[#16a34a] hover:bg-[#16a34a]/90 text-white">
+            <Link href="/dashboard/teams/new">
+              <Users className="mr-2 h-4 w-4" />
+              Criar Equipe
+            </Link>
+          </Button>
         </div>
 
         <div className="flex gap-8">

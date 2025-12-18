@@ -1,9 +1,11 @@
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import PublicHeader from "@/components/public-header"
 import { Calendar, User } from "lucide-react"
 import Image from "next/image"
+import Link from "next/link"
 
 export default async function NewsPage() {
   const supabase = await createClient()
@@ -72,7 +74,7 @@ export default async function NewsPage() {
                         <CardTitle className="text-lg">{item.title}</CardTitle>
                         <CardDescription className="line-clamp-3">{item.content}</CardDescription>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="space-y-4">
                         <div className="flex items-center gap-4 text-sm text-slate-600">
                           <div className="flex items-center gap-1">
                             <User className="h-4 w-4" />
@@ -83,6 +85,9 @@ export default async function NewsPage() {
                             <span>{new Date(item.created_at).toLocaleDateString("pt-BR")}</span>
                           </div>
                         </div>
+                        <Button asChild className="w-full bg-[#1e3a8a] hover:bg-[#1e3a8a]/90">
+                          <Link href={`/news/${item.id}`}>Ver Detalhes</Link>
+                        </Button>
                       </CardContent>
                     </Card>
                     {(index + 1) % 4 === 0 && (
