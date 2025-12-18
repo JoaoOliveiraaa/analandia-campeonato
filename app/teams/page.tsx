@@ -26,11 +26,17 @@ export default async function TeamsManagementPage() {
     redirect("/dashboard")
   }
 
-  // Get all teams with championship info
-  const { data: teams } = await supabase
+  const { data: teams, error: teamsError } = await supabase
     .from("teams")
     .select("*, championships(name), profiles(full_name)")
     .order("created_at", { ascending: false })
+
+  console.log("[v0] Teams query result:", { teams, teamsError, count: teams?.length })
+
+  // Also try a simple query without joins to see if that's the issue
+  const { data: simpleTeams, error: simpleError } = await supabase.from("teams").select("*")
+
+  console.log("[v0] Simple teams query:", { simpleTeams, simpleError, count: simpleTeams?.length })
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -54,7 +60,7 @@ export default async function TeamsManagementPage() {
       case "rejected":
         return "Rejeitada"
       default:
-        return status
+        return status || "Sem status"
     }
   }
 
@@ -66,6 +72,11 @@ export default async function TeamsManagementPage() {
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">Gerenciar Equipes</h2>
           <p className="text-muted-foreground">Aprove ou rejeite inscrições de equipes</p>
+          {teamsError && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-800 text-sm">Erro ao buscar equipes: {teamsError.message}</p>
+            </div>
+          )}
         </div>
 
         {teams && teams.length > 0 ? (
@@ -101,10 +112,12 @@ export default async function TeamsManagementPage() {
                   <Users className="h-8 w-8 text-blue-600" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-xl font-semibold">Nenhuma equipe cadastrada</h3>
+                  <h3 className="text-xl font-semibold">Nenhuma equipe encontrada</h3>
                   <p className="text-muted-foreground max-w-md">
-                    Ainda não há equipes registradas no sistema. As equipes aparecerão aqui assim que forem criadas
-                    pelos usuários.
+                    Não foram encontradas equipes no banco de dados. Verifique se as equipes foram criadas corretamente.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Debug: {simpleTeams?.length || 0} equipes encontradas na query simples
                   </p>
                 </div>
                 <Button asChild className="mt-2">
