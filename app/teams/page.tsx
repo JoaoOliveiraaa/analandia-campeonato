@@ -8,7 +8,8 @@ import TeamApprovalButton from "@/components/team-approval-button"
 import Link from "next/link"
 import { Users } from "lucide-react"
 
-export default async function TeamsManagementPage() {
+export default async function TeamsManagementPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const supabase = await createClient()
 
   const {
