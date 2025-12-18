@@ -1,138 +1,119 @@
+import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import PublicHeader from "@/components/public-header"
-import { Users } from "lucide-react"
-import Image from "next/image"
+import AdminHeader from "@/components/admin-header"
+import TeamApprovalButton from "@/components/team-approval-button"
 import Link from "next/link"
+import { Users } from "lucide-react"
 
-export default async function TeamsPage() {
+export default async function TeamsManagementPage() {
   const supabase = await createClient()
 
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
+
+  if (error || !user) {
+    redirect("/auth/login")
+  }
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+
+  if (!profile || !["admin", "organizer"].includes(profile.role)) {
+    redirect("/dashboard")
+  }
+
+  // Get all teams with championship info
   const { data: teams } = await supabase
     .from("teams")
     .select("*, championships(name), profiles(full_name)")
-    .eq("registration_status", "approved")
-    .order("name", { ascending: true })
+    .order("created_at", { ascending: false })
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "bg-yellow-500"
+      case "approved":
+        return "bg-green-500"
+      case "rejected":
+        return "bg-red-500"
+      default:
+        return "bg-gray-500"
+    }
+  }
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "Pendente"
+      case "approved":
+        return "Aprovada"
+      case "rejected":
+        return "Rejeitada"
+      default:
+        return status
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-blue-50/50 to-slate-50">
-      <PublicHeader />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
+      <AdminHeader userName={profile.full_name} />
 
-      <main className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="bg-gradient-to-r from-[#16a34a] to-[#22c55e] rounded-2xl shadow-lg p-8 mb-8 text-white text-center">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-              <span className="text-sm font-bold">AD</span>
-            </div>
-            <p className="text-lg font-semibold">Espaço Publicitário Premium</p>
-          </div>
-          <p className="text-sm opacity-90">Apoie o esporte local com seu anúncio</p>
+      <main className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold mb-2">Gerenciar Equipes</h2>
+          <p className="text-muted-foreground">Aprove ou rejeite inscrições de equipes</p>
         </div>
 
-        <div className="mb-8 flex items-center gap-4">
-          <Image
-            src="/logo.png"
-            alt="Campeonato Municipal de Analândia"
-            width={60}
-            height={60}
-            className="drop-shadow-lg hidden sm:block"
-          />
-          <div className="flex-1">
-            <h1 className="text-4xl font-bold mb-2 text-[#1e3a8a]">Equipes</h1>
-            <p className="text-slate-600">Todas as equipes aprovadas nos campeonatos de Analândia</p>
-          </div>
-          <Button asChild className="bg-[#16a34a] hover:bg-[#16a34a]/90 text-white">
-            <Link href="/dashboard/teams/new">
-              <Users className="mr-2 h-4 w-4" />
-              Criar Equipe
-            </Link>
-          </Button>
-        </div>
-
-        <div className="flex gap-8">
-          <aside className="hidden lg:block w-64 space-y-6">
-            <div className="bg-gradient-to-br from-[#1e3a8a] to-[#1e40af] rounded-2xl shadow-lg p-6 h-96 flex flex-col items-center justify-center text-white text-center">
-              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center mb-3">
-                <span className="font-bold">AD</span>
-              </div>
-              <p className="text-sm font-semibold mb-2">Anúncio Lateral</p>
-              <p className="text-xs opacity-90">Espaço disponível</p>
-            </div>
-          </aside>
-
-          <div className="flex-1">
-            {teams && teams.length > 0 ? (
-              <div className="grid gap-6 md:grid-cols-2">
-                {teams.map((team, index) => (
-                  <>
-                    <Card
-                      key={team.id}
-                      className="hover:shadow-xl transition-all border-2 border-blue-100 hover:border-[#16a34a]"
-                    >
-                      <CardHeader>
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                            <Users className="h-6 w-6 text-blue-600" />
-                          </div>
-                          <div className="flex-1">
-                            <CardTitle className="text-lg">{team.name}</CardTitle>
-                            <Badge variant="outline" className="mt-1">
-                              Aprovada
-                            </Badge>
-                          </div>
-                        </div>
-                        <CardDescription>Campeonato: {team.championships?.name || "N/A"}</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-slate-600">Técnico: {team.profiles?.full_name || "Não informado"}</p>
-                      </CardContent>
-                    </Card>
-                    {(index + 1) % 6 === 0 && (
-                      <div className="md:col-span-2">
-                        <div className="bg-gradient-to-r from-[#2563eb] to-[#3b82f6] rounded-2xl shadow-lg p-6 my-4 text-white text-center">
-                          <div className="flex items-center justify-center gap-3">
-                            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                              <span className="text-sm font-bold">AD</span>
-                            </div>
-                            <p className="text-sm font-semibold">Espaço para Anúncio</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ))}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <p className="text-slate-600">Nenhuma equipe aprovada ainda</p>
+        {teams && teams.length > 0 ? (
+          <div className="grid gap-6">
+            {teams.map((team) => (
+              <Card key={team.id}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle>{team.name}</CardTitle>
+                      <CardDescription className="mt-1">
+                        Campeonato: {team.championships?.name || "N/A"}
+                        <br />
+                        Técnico: {team.profiles?.full_name || "Não informado"}
+                      </CardDescription>
+                    </div>
+                    <Badge className={getStatusColor(team.registration_status)}>
+                      {getStatusLabel(team.registration_status)}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <TeamApprovalButton teamId={team.id} currentStatus={team.registration_status} />
                 </CardContent>
               </Card>
-            )}
+            ))}
           </div>
-
-          <aside className="hidden xl:block w-64 space-y-6">
-            <div className="bg-gradient-to-br from-[#15803d] to-[#16a34a] rounded-2xl shadow-lg p-6 h-96 flex flex-col items-center justify-center text-white text-center">
-              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center mb-3">
-                <span className="font-bold">AD</span>
+        ) : (
+          <Card>
+            <CardContent className="py-16 text-center">
+              <div className="flex flex-col items-center gap-4">
+                <div className="rounded-full bg-blue-100 p-4">
+                  <Users className="h-8 w-8 text-blue-600" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold">Nenhuma equipe cadastrada</h3>
+                  <p className="text-muted-foreground max-w-md">
+                    Ainda não há equipes registradas no sistema. As equipes aparecerão aqui assim que forem criadas
+                    pelos usuários.
+                  </p>
+                </div>
+                <Button asChild className="mt-2">
+                  <Link href="/dashboard/teams/new">Cadastrar Nova Equipe</Link>
+                </Button>
               </div>
-              <p className="text-sm font-semibold mb-2">Anúncio Lateral</p>
-              <p className="text-xs opacity-90">Espaço disponível</p>
-            </div>
-          </aside>
-        </div>
-
-        <div className="bg-gradient-to-r from-[#1e3a8a] to-[#2563eb] rounded-2xl shadow-lg p-6 mt-8 text-white text-center">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-              <span className="text-sm font-bold">AD</span>
-            </div>
-            <p className="text-sm font-semibold">Espaço Publicitário</p>
-          </div>
-          <p className="text-xs opacity-80">Entre em contato: anuncios@analandia.sp.gov.br</p>
-        </div>
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   )
