@@ -7,27 +7,48 @@ import PublicHeader from "@/components/public-header"
 import { Calendar, Users, Trophy, MapPin } from "lucide-react"
 import { notFound } from "next/navigation"
 
-export default async function ChampionshipDetailPage({ params }: { params: { id: string } }) {
-  const supabase = await createClient()
+export default async function ChampionshipDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  // 🔹 MESMO PADRÃO DO NEWS (evita bug do Turbopack)
+  const { id } = await params
 
-  const { data: championship } = await supabase.from("championships").select("*").eq("id", params.id).single()
-
-  if (!championship) {
+  if (!id) {
     notFound()
   }
 
-  // Get teams for this championship
+  const supabase = await createClient()
+
+  // 🔹 Campeonato
+  const { data: championship, error } = await supabase
+    .from("championships")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (error || !championship) {
+    console.error("Erro ao buscar campeonato:", error)
+    notFound()
+  }
+
+  // 🔹 Equipes
   const { data: teams } = await supabase
     .from("teams")
     .select("*, profiles(full_name)")
-    .eq("championship_id", params.id)
+    .eq("championship_id", id)
     .eq("registration_status", "approved")
 
-  // Get matches for this championship
+  // 🔹 Partidas
   const { data: matches } = await supabase
     .from("matches")
-    .select("*, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name)")
-    .eq("championship_id", params.id)
+    .select(`
+      *,
+      home_team:teams!matches_home_team_id_fkey(name),
+      away_team:teams!matches_away_team_id_fkey(name)
+    `)
+    .eq("championship_id", id)
     .order("match_date", { ascending: true })
 
   const getStatusColor = (status: string) => {
@@ -69,27 +90,33 @@ export default async function ChampionshipDetailPage({ params }: { params: { id:
       <PublicHeader />
 
       <main className="container mx-auto px-4 py-8">
-        {/* Championship Header */}
+        {/* Header */}
         <div className="mb-8">
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
               <h1 className="text-4xl font-bold mb-2">{championship.name}</h1>
-              <Badge className={getStatusColor(championship.status)}>{getStatusLabel(championship.status)}</Badge>
+              <Badge className={getStatusColor(championship.status)}>
+                {getStatusLabel(championship.status)}
+              </Badge>
             </div>
+
             {championship.status === "registration_open" && (
               <Button asChild size="lg">
                 <Link href="/auth/signup">Inscrever Equipe</Link>
               </Button>
             )}
           </div>
-          <p className="text-muted-foreground text-lg">{championship.description || "Campeonato municipal"}</p>
+
+          <p className="text-muted-foreground text-lg">
+            {championship.description || "Campeonato municipal"}
+          </p>
         </div>
 
-        {/* Championship Info */}
+        {/* Info */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Modalidade</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm">Modalidade</CardTitle>
               <Trophy className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -98,22 +125,20 @@ export default async function ChampionshipDetailPage({ params }: { params: { id:
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Período</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm">Período</CardTitle>
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-sm">
-                {new Date(championship.start_date).toLocaleDateString("pt-BR")}
-                <br />
-                até {new Date(championship.end_date).toLocaleDateString("pt-BR")}
-              </div>
+            <CardContent className="text-sm">
+              {new Date(championship.start_date).toLocaleDateString("pt-BR")}
+              <br />
+              até {new Date(championship.end_date).toLocaleDateString("pt-BR")}
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Equipes</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm">Equipes</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -125,42 +150,46 @@ export default async function ChampionshipDetailPage({ params }: { params: { id:
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Formato</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm">Formato</CardTitle>
               <MapPin className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-sm capitalize">{championship.format?.replace("_", " ") || "A definir"}</div>
+            <CardContent className="capitalize text-sm">
+              {championship.format?.replace("_", " ") || "A definir"}
             </CardContent>
           </Card>
         </div>
 
-        {/* Teams Section */}
+        {/* Equipes */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold mb-4">Equipes Participantes</h2>
+
           {teams && teams.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {teams.map((team) => (
                 <Card key={team.id}>
                   <CardHeader>
                     <CardTitle className="text-lg">{team.name}</CardTitle>
-                    <CardDescription>Técnico: {team.profiles?.full_name || "Não informado"}</CardDescription>
+                    <CardDescription>
+                      Técnico: {team.profiles?.full_name || "Não informado"}
+                    </CardDescription>
                   </CardHeader>
                 </Card>
               ))}
             </div>
           ) : (
             <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Nenhuma equipe inscrita ainda</p>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                Nenhuma equipe inscrita ainda
               </CardContent>
             </Card>
           )}
         </div>
 
-        {/* Matches Section */}
+        {/* Partidas */}
         <div>
           <h2 className="text-2xl font-bold mb-4">Partidas</h2>
+
           {matches && matches.length > 0 ? (
             <div className="space-y-4">
               {matches.map((match) => (
@@ -170,9 +199,12 @@ export default async function ChampionshipDetailPage({ params }: { params: { id:
                       <div className="flex-1 text-right">
                         <p className="font-semibold">{match.home_team?.name || "TBD"}</p>
                         {match.status === "completed" && match.home_score !== null && (
-                          <p className="text-2xl font-bold text-blue-600">{match.home_score}</p>
+                          <p className="text-2xl font-bold text-blue-600">
+                            {match.home_score}
+                          </p>
                         )}
                       </div>
+
                       <div className="px-6 text-center">
                         <Badge variant="outline">VS</Badge>
                         <p className="text-xs text-muted-foreground mt-2">
@@ -185,10 +217,13 @@ export default async function ChampionshipDetailPage({ params }: { params: { id:
                           })}
                         </p>
                       </div>
+
                       <div className="flex-1">
                         <p className="font-semibold">{match.away_team?.name || "TBD"}</p>
                         {match.status === "completed" && match.away_score !== null && (
-                          <p className="text-2xl font-bold text-green-600">{match.away_score}</p>
+                          <p className="text-2xl font-bold text-green-600">
+                            {match.away_score}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -198,8 +233,8 @@ export default async function ChampionshipDetailPage({ params }: { params: { id:
             </div>
           ) : (
             <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">Nenhuma partida agendada ainda</p>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                Nenhuma partida agendada ainda
               </CardContent>
             </Card>
           )}
